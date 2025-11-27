@@ -26,9 +26,9 @@ export async function initializeRealEmbeddings() {
       'feature-extraction',
       'Xenova/all-MiniLM-L6-v2'
     )
-    console.log('✅ Embedding model loaded')
+    console.log('Embedding model loaded')
   } catch (error) {
-    console.warn('⚠️  Real embeddings not available, using mock')
+    console.warn('Real embeddings not available, using mock')
     embeddingModel = null
   }
 }

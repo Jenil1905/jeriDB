@@ -11,12 +11,12 @@ class VectorDB {
   
   async initialize() {
     try {
-      console.log(`🔄 Initializing VectorDB at ${this.dbPath}...`)
+      console.log(`Initializing VectorDB at ${this.dbPath}...`)
       this.db = await lancedb.connect(this.dbPath)
-      console.log('✅ VectorDB connected')
+      console.log('VectorDB connected')
       return true
     } catch (error) {
-      console.error('❌ Failed to initialize VectorDB:', error.message)
+      console.error('Failed to initialize VectorDB:', error.message)
       throw error
     }
   }
@@ -25,63 +25,51 @@ class VectorDB {
     try {
       try {
         this.table = await this.db.openTable(tableName)
-        console.log(`✅ Opened existing table: ${tableName}`)
+        console.log(`Opened existing table: ${tableName}`)
       } catch {
-        console.log(`📝 Creating new table: ${tableName}`)
-        const initialData = [{
-          id: 'temp',
-          text: 'temp',
-          embedding: new Array(384).fill(0),
+        console.log(`Creating new table: ${tableName}`)
+        const dummyData = [{
+          id: 'init',
+          text: 'init',
+          embedding: new Array(384).fill(0.001),
           metadata: '{}'
         }]
-        this.table = await this.db.createTable(tableName, initialData, {
-          mode: 'overwrite'
-        })
-        console.log(`✅ Created table: ${tableName}`)
+        this.table = await this.db.createTable(tableName, dummyData)
+        console.log(`Created table: ${tableName}`)
       }
     } catch (error) {
-      console.error('❌ Failed to ensure table:', error.message)
+      console.error('Failed to ensure table:', error.message)
       throw error
     }
   }
   
   async addDocument(id, text, metadata = {}) {
     try {
-      const embedding = await generateEmbedding(text)
+      const embedding = await generateEmbedding(text, true) 
       const document = {
         id,
         text,
         embedding,
-        metadata: JSON.stringify(metadata),
+        metadata: JSON.stringify(metadata)
       }
       await this.table.add([document])
       this.documentCount++
-      console.log(`✅ Added document: ${id}`)
+      console.log(`Added document: ${id}`)
       return document
     } catch (error) {
-      console.error(`❌ Failed to add document ${id}:`, error.message)
-      throw error
-    }
-  }
-  
-  async getDocument(id) {
-    try {
-      const results = await this.table.search([]).limit(1000).toArray()
-      const doc = results.find(d => d.id === id)
-      if (!doc) throw new Error(`Document not found: ${id}`)
-      return { ...doc, metadata: JSON.parse(doc.metadata) }
-    } catch (error) {
-      console.error(`❌ Failed to get document ${id}:`, error.message)
+      console.error(`Failed to add document ${id}:`, error.message)
       throw error
     }
   }
   
   async search(queryText, topK = 5) {
     try {
-      console.log(`🔍 Searching for: "${queryText}"`)
-      const queryEmbedding = await generateEmbedding(queryText)
+      console.log(`Searching for: "${queryText}"`)
+      const queryEmbedding = await generateEmbedding(queryText, true) 
       const startTime = Date.now()
+      
       const results = await this.table.search(queryEmbedding).limit(topK).toArray()
+      
       const latency = Date.now() - startTime
       
       const formattedResults = results.map((result, index) => ({
@@ -91,79 +79,87 @@ class VectorDB {
         distance: result._distance || 0,
         similarity: 1 - (result._distance || 0),
         metadata: result.metadata ? JSON.parse(result.metadata) : {}
-      }))
+      })).filter(r => r.docId !== 'init') 
       
-      console.log(`✅ Found ${formattedResults.length} results in ${latency}ms`)
+      console.log(`Found ${formattedResults.length} results in ${latency}ms`)
       return {
+        success: true,
         query: queryText,
         results: formattedResults,
         totalResults: formattedResults.length,
         latencyMs: latency
       }
     } catch (error) {
-      console.error('❌ Search failed:', error.message)
+      console.error('Search failed:', error.message)
       throw error
     }
   }
   
   async getAllDocuments(limit = 1000) {
     try {
-      const results = await this.table.search([]).limit(limit).toArray()
-      return results.map(doc => ({
-        ...doc,
+      const results = await this.table.search(new Array(384).fill(0)).limit(limit).toArray()
+      return results
+        .map(doc => ({
+          id: doc.id,
+          text: doc.text,
+          metadata: doc.metadata ? JSON.parse(doc.metadata) : {}
+        }))
+        .filter(doc => doc.id !== 'init')
+    } catch (error) {
+      console.error('Failed to get all documents:', error.message)
+      return []
+    }
+  }
+  
+  async getDocument(id) {
+    try {
+      const results = await this.table.search(new Array(384).fill(0)).limit(1000).toArray()
+      const doc = results.find(d => d.id === id)
+      if (!doc) throw new Error(`Document not found: ${id}`)
+      return { 
+        id: doc.id,
+        text: doc.text,
         metadata: doc.metadata ? JSON.parse(doc.metadata) : {}
-      }))
-    } catch (error) {
-      console.error('❌ Failed to get all documents:', error.message)
-      throw error
-    }
-  }
-  
-  async updateDocument(id, newText, newMetadata = null) {
-    try {
-      const doc = await this.getDocument(id)
-      const embedding = newText ? await generateEmbedding(newText) : doc.embedding
-      const updated = {
-        id,
-        text: newText || doc.text,
-        embedding,
-        metadata: JSON.stringify(newMetadata || JSON.parse(doc.metadata)),
-        createdAt: doc.createdAt,
-        updatedAt: new Date().toISOString()
       }
-      await this.deleteDocument(id)
-      await this.table.add([updated])
-      console.log(`✅ Updated document: ${id}`)
-      return updated
     } catch (error) {
-      console.error(`❌ Failed to update document ${id}:`, error.message)
-      throw error
-    }
-  }
-  
-  async deleteDocument(id) {
-    try {
-      console.log(`✅ Marked document as deleted: ${id}`)
-    } catch (error) {
-      console.error(`❌ Failed to delete document ${id}:`, error.message)
+      console.error(`Failed to get document ${id}:`, error.message)
       throw error
     }
   }
   
   async getStats() {
-    try {
-      const allDocs = await this.table.search([]).limit(1000).toArray()
-      return {
-        totalDocuments: allDocs.length,
-        embeddingDimension: 384,
-        dbPath: this.dbPath,
-        lastUpdated: new Date().toISOString()
-      }
-    } catch (error) {
-      console.error('❌ Failed to get stats:', error.message)
-      throw error
+    return {
+      totalDocuments: this.documentCount,
+      embeddingDimension: 384,
+      dbPath: this.dbPath,
+      status: 'healthy'
     }
   }
+  async updateDocument(id, text, metadata) {
+  try {
+    await this.deleteDocument(id)
+    await this.addDocument(id, text, metadata)
+  } catch (error) {
+    console.log('Vector update failed, creating new:', error.message)
+    await this.addDocument(id, text, metadata)
+  }
+}
+
+async deleteDocument(id) {
+  if (!this.table) {
+    console.log('No table available for delete')
+    return
+  }
+  
+  try {
+    const filter = lancedb.where(`id == "${id}"`)
+    const deletedCount = await this.table.delete(filter)
+    console.log(`Deleted ${deletedCount} vector records: ${id}`)
+  } catch (error) {
+    console.warn(`Vector delete failed for ${id}:`, error.message)
+  }
+}
+
 }
 
 export default VectorDB
