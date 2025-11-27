@@ -1,54 +1,48 @@
-Hybrid Vector + Graph Database README
-Project Overview
-This project implements a hybrid retrieval system that combines a vector database (LanceDB) for semantic similarity search with a graph database (Neo4j) for relationship-based traversal and reasoning. It supports intelligent ingest routing of data and advanced hybrid search including multi-hop graph reasoning, relationship-weighted scoring, pagination, and schema validation. The goal is to enable powerful, explainable retrieval augmented generation (RAG) workflows leveraging the complementary strengths of vector embeddings and knowledge graphs.
+# jeriDB - Hybrid Vector + Graph Native Database
 
-Features
-Core Features
-Hybrid Storage: Store textual data as embeddings in LanceDB and structured relationships in Neo4j.
+## 🚩 The Problem
+Modern AI systems need both semantic understanding and structural reasoning.
+*   **Vector DBs** miss deep relationships.
+*   **Graph DBs** miss semantic similarity.
 
-Data Ingestion: Intelligent routing ingests raw text and graph nodes/edges.
+**jeriDB** solves this by combining both into a single, minimal system that outperforms single-mode retrieval.
 
-Hybrid Search: Combines vector similarity scoring with graph relationship boosts.
+## 💡 Our Solution
+A hybrid database that bridges the gap:
 
-Multi-hop Reasoning: Traverse multiple hops in graph for advanced contextual retrieval.
+*   **Hybrid Ingestion**: Automatically routes data to **LanceDB** (Vector) for similarity and **Neo4j** (Graph) for relationships.
+*   **Unified Retrieval**: Merges vector similarity scores with graph relationship boosts for context-aware results.
+*   **Local-First**: Runs entirely locally using **Xenova Transformers** for embeddings—no external API keys required.
 
-Schema Validation: Ensures node and edge data follows consistent schema.
+## ✨ Key Features
+*   **Hybrid Search**: Weighted combination of vector + graph scores.
+*   **Multi-hop Reasoning**: Traverses graph relationships (2-3 hops) to find indirect connections.
+*   **Vector & Graph Modes**: Flexible querying for specific needs.
+*   **Full CRUD**: Complete API for managing Nodes and Edges.
 
-Full CRUD: Creation, update, deletion of nodes and edges.
+## 🛠️ Tech Stack
+*   **Backend**: Node.js, Express
+*   **Vector Store**: LanceDB
+*   **Graph Store**: Neo4j
+*   **Embeddings**: Xenova Transformers (Local, On-device)
+*   **Frontend**: React, Vite
 
-Pagination: Supports paged retrieval from hybrid search results.
+## 🚀 Getting Started
 
-Stats & Health: APIs expose vector/graph statistics and health.
+### 1. Backend
+```bash
+cd backend
+npm install
+# Configure .env with NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+npm start
+```
 
-APIs
-POST /hybrid/nodes - Create a node (with validation)
+### 2. Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-GET /hybrid/nodes/:id - Fetch a node by ID
-
-PUT /hybrid/nodes/:id - Update a node
-
-DELETE /hybrid/nodes/:id - Delete a node and related edges
-
-POST /hybrid/edges - Create typed relationship between nodes (with validation)
-
-GET /hybrid/edges/:id - Get edge details
-
-POST /hybrid/ingest - Intelligent ingest routing for text + graph data
-
-POST /hybrid/search - Hybrid retrieval with vector + graph scoring + pagination
-
-POST /hybrid/search/vector - Vector-only retrieval
-
-GET /hybrid/search/graph - Graph traversal search
-
-GET /hybrid/search/multi-hop - Multi-hop graph reasoning
-
-GET /hybrid/stats - Stats and health of vector and graph stores
-
-Installation and Setup
-Prerequisites
-Node.js 18+
-
-Neo4j database instance accessible with credentials
-
-Compatible embeddings API (e.g., OpenAI, or local embedding generator)
+---
+*Built for Devfolio Problem Statement 1: Vector + Graph Native Database for Efficient AI Retrieval*

@@ -1,24 +1,31 @@
 import neo4j from 'neo4j-driver'
 
-const NEO4J_URI = process.env.NEO4J_URI || 'bolt://localhost:7687'
-const NEO4J_USER = process.env.NEO4J_USER || 'neo4j'
-const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD || 'password'
-
-const driver = neo4j.driver(NEO4J_URI, neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD))
-
 export default class Neo4jDB {
   constructor() {
     this.session = null
-    this.driver = driver
+    this.driver = null
+
+    // Get environment variables
+    const NEO4J_URI = process.env.NEO4J_URI || 'bolt://localhost:7687'
+    const NEO4J_USER = process.env.NEO4J_USER || 'neo4j'
+    const NEO4J_PASSWORD = process.env.NEO4J_PASSWORD || 'password'
+
+    console.log('Connecting to Neo4j:', NEO4J_URI.replace(/\/\/.*@/, '//*****@')) // Log URI without showing credentials
+
+    // Create driver - encryption is handled by the URI scheme (neo4j+s:// for encrypted)
+    this.driver = neo4j.driver(
+      NEO4J_URI,
+      neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD)
+    )
   }
 
   async initialize() {
     try {
-      this.session = driver.session()
+      this.session = this.driver.session()
       await this.session.run('RETURN 1')
-      console.log('Neo4j connected')
+      console.log('✅ Neo4j connected successfully')
     } catch (error) {
-      console.error('Neo4j connection failed:', error.message)
+      console.error('❌ Neo4j connection failed:', error.message)
       throw error
     }
   }
@@ -71,7 +78,7 @@ export default class Neo4jDB {
     try {
       const nodesResult = await this.session.run('MATCH (n) RETURN count(n) as totalNodes')
       const edgesResult = await this.session.run('MATCH ()-[r]->() RETURN count(r) as totalEdges')
-      
+
       return {
         totalNodes: nodesResult.records[0]?.get('totalNodes')?.low || 0,
         totalEdges: edgesResult.records[0]?.get('totalEdges')?.low || 0,
@@ -92,6 +99,6 @@ export default class Neo4jDB {
 
   async close() {
     await this.session?.close()
-    await driver.close()
+    await this.driver?.close()
   }
 }
